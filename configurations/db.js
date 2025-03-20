@@ -12,14 +12,15 @@ const config = {
   },
 };
 
-(async ()=>{
-    try {
-        await sql.connect(config);
-        console.log("Connected to SQL Server");
-    }
-    catch(err){
-        console.error("Database connection failed:", err);
-    }
-})();
+async function connectDB() {
+  try {
+      await sql.connect(config);
+      console.log("Connected to SQL Server");
+  } catch (err) {
+      console.error("Database connection failed:", err);
+  }
+}
+
+connectDB();
 
 export default sql;
