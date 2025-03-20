@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 dotenv.config();
-import sql from "./configurations/db.js";
+import sql from "./configurations/db.config.js";
 
 //routing imports
 import kitchensRoutes from './routes/kitchens.routes.js';
