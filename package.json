@@ -11,6 +11,7 @@
   "author": "Shaiq Raza",
   "license": "ISC",
   "dependencies": {
+    "cloudinary": "^2.6.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mssql": "^11.0.1"
