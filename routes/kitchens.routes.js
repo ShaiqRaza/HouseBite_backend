@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllkitchens } from '../controllers/kitchens.controller.js';
+import { getAllkitchens } from '../controllers/kitchens.controllers.js';
 
 const router = express.Router();
 
