@@ -1,0 +1,11 @@
+{
+  "name": "housebitebackend",
+  "version": "1.0.0",
+  "description": "Backend for my DB Lab  Project and my upcoming startup's",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Shaiq Raza",
+  "license": "ISC"
+}
