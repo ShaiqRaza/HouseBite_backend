@@ -3,6 +3,7 @@ import { imageUpload, imageDelete } from '../../PortfolioWebsiteBackend/utils/up
 import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
+import axios from 'axios';
 
 export const getAllkitchens = async (req, res) => {
     try{
@@ -30,6 +31,15 @@ export const createKitchen = async (req, res) => {
     }
 
     try{
+
+        axios.get(`https://emailvalidation.abstractapi.com/v1/?api_key=${process.env.ABSTRACT_API_KEY}&email=${email}`)
+            .then(response => {
+                if (response.data.deliverability === "UNDELIVERABLE" || !response.data.is_mx_found.value)
+                    return res.status(400).json({ message: "Invalid email address." });
+            })
+            .catch(error => {
+                throw error("Email validation failed.");
+            });
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -78,6 +88,50 @@ export const deleteKitchen = async (req, res) => {
     catch(err){
         res.status(500).json({ 
             message: "An error occurred while deleting the kitchen.",
+            error: err.message 
+        });
+    }
+};
+
+export const updateKitchen = async (req, res) => {
+    const id = req.params.id;
+    const image = req.file || null;//image is optional
+
+    const {name, phone, email, address, latitude, longitude, password} = req.body || {};
+    let uploadedImage = null;
+
+    if (!id) {
+        return res.status(400).json({ message: "Kitchen ID is required for updating." });
+    }
+
+    if (!name && !phone && !email && !address && !latitude && !longitude && !password && !image) {
+        return res.status(400).json({ message: "Nothing to update." });
+    }
+
+    try{
+        const kitchen = await sql.query`SELECT * FROM kitchens WHERE id=${id}`;
+
+        if(kitchen.recordset.length == 0){
+            return res.status(404).json({ message: "Kitchen not found!" });
+        }
+
+        if(image){
+            if(kitchen.recordset[0].profile_image_id){
+                await imageDelete(kitchen.recordset[0].profile_image_id);
+            }
+            uploadedImage = await imageUpload(image.path);
+            await fs.unlink(image.path);
+        }
+
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+
+        await sql.query`UPDATE kitchens SET name=${name || kitchen.recordset[0].name}, phone=${phone || kitchen.recordset[0].phone}, email=${email || kitchen.recordset[0].email}, address=${address || kitchen.recordset[0].address}, latitude=${latitude || kitchen.recordset[0].latitude}, longitude=${longitude || kitchen.recordset[0].longitude}, profile_image_url=${uploadedImage?.secure_url || kitchen.recordset[0].profile_image_url}, profile_image_id=${uploadedImage?.public_id || kitchen.recordset[0].profile_image_id} WHERE id=${id}`;
+
+        res.status(200).json({ message: "Kitchen updated successfully." });
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while updating the kitchen.",
             error: err.message 
         });
     }
