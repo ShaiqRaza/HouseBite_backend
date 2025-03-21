@@ -32,10 +32,10 @@ export const createKitchen = async (req, res) => {
             await fs.unlink(image.path);
         }
         
-        const newKitchen = await sql.query`INSERT INTO kitchens (name, phone, email, password, address, latitude, longitude, profile_image_url, profile_image_id) VALUES 
-        (${name}, ${phone}, ${email}, ${password}, ${address}, ${latitude}, ${longitude}, ${uploadedImage?.secure_url || null}, ${uploadedImage?.public_id || null})`;
+        const newKitchen = await sql.query`INSERT INTO kitchens (name, phone, email, password, address, latitude, longitude, profile_image_url, profile_image_id) OUTPUT INSERTED.* 
+        VALUES (${name}, ${phone}, ${email}, ${password}, ${address}, ${latitude}, ${longitude}, ${uploadedImage?.secure_url || null}, ${uploadedImage?.public_id || null})`;
 
-        res.status(200).json(newKitchen);
+        res.status(200).json(newKitchen.recordset[0]);
     }
     catch(err){
         res.status(500).json({ 
