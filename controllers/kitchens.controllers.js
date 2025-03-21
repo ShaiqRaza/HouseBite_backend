@@ -44,3 +44,33 @@ export const createKitchen = async (req, res) => {
         });
     }
 }
+
+//will optimize this after learning transactions
+export const deleteKitchen = async (req, res) => {
+    const id = req.params.id;
+
+    if (!id) {
+        return res.status(400).json({ message: "Kitchen ID is required for deletion." });
+    }
+
+    try{
+        const kitchen = await sql.query`SELECT * FROM kitchens WHERE id=${id}`;
+
+        if(kitchen.recordset.length == 0){
+            return res.status(404).json({ message: "Kitchen not found!" });
+        }
+
+        if(kitchen.recordset[0].profile_image_id){
+            await imageDelete(kitchen.recordset[0].profile_image_id);
+        }
+
+        await sql.query`DELETE FROM kitchens WHERE id=${id}`;
+        res.status(200).json({ message: "Kitchen deleted successfully." });
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while deleting the kitchen.",
+            error: err.message 
+        });
+    }
+};
