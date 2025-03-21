@@ -1,6 +1,8 @@
 import sql from '../configurations/db.config.js';
 import { imageUpload, imageDelete } from '../../PortfolioWebsiteBackend/utils/uploadHandlers.js';
 import fs from 'fs/promises';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 export const getAllkitchens = async (req, res) => {
     try{
@@ -15,6 +17,7 @@ export const getAllkitchens = async (req, res) => {
     }
 }
 
+//will create kitchen along with autheticating it by sending cookie
 export const createKitchen = async (req, res) => {
     const image = req.file || null;//image is optional
 
@@ -27,14 +30,19 @@ export const createKitchen = async (req, res) => {
     }
 
     try{
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         if(image){
             uploadedImage = await imageUpload(image.path);
             await fs.unlink(image.path);
         }
-        
-        const newKitchen = await sql.query`INSERT INTO kitchens (name, phone, email, password, address, latitude, longitude, profile_image_url, profile_image_id) OUTPUT INSERTED.* 
-        VALUES (${name}, ${phone}, ${email}, ${password}, ${address}, ${latitude}, ${longitude}, ${uploadedImage?.secure_url || null}, ${uploadedImage?.public_id || null})`;
 
+        const newKitchen = await sql.query`INSERT INTO kitchens (name, phone, email, password, address, latitude, longitude, profile_image_url, profile_image_id) OUTPUT INSERTED.* 
+        VALUES (${name}, ${phone}, ${email}, ${hashedPassword}, ${address}, ${latitude}, ${longitude}, ${uploadedImage?.secure_url || null}, ${uploadedImage?.public_id || null})`;
+
+        const token = jwt.sign({ id: newKitchen.recordset[0].id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.cookie('token', token, { httpOnly: true });
         res.status(200).json(newKitchen.recordset[0]);
     }
     catch(err){
