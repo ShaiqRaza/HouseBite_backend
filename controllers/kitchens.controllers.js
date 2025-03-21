@@ -19,6 +19,7 @@ export const getAllkitchens = async (req, res) => {
 }
 
 //will create kitchen along with autheticating it by sending cookie
+//will add emeail verification later
 export const createKitchen = async (req, res) => {
     const image = req.file || null;//image is optional
 
@@ -47,7 +48,7 @@ export const createKitchen = async (req, res) => {
             uploadedImage = await imageUpload(image.path);
             await fs.unlink(image.path);
         }
-
+        
         const newKitchen = await sql.query`INSERT INTO kitchens (name, phone, email, password, address, latitude, longitude, profile_image_url, profile_image_id) OUTPUT INSERTED.* 
         VALUES (${name}, ${phone}, ${email}, ${hashedPassword}, ${address}, ${latitude}, ${longitude}, ${uploadedImage?.secure_url || null}, ${uploadedImage?.public_id || null})`;
 
@@ -93,18 +94,16 @@ export const deleteKitchen = async (req, res) => {
     }
 };
 
-export const updateKitchen = async (req, res) => {
+//all the things updation except image and email
+export const updateKitchenDetails = async (req, res) => {
     const id = req.params.id;
-    const image = req.file || null;//image is optional
-
-    const {name, phone, email, address, latitude, longitude, password} = req.body || {};
-    let uploadedImage = null;
+    const {name, phone, address, latitude, longitude, password} = req.body || {};
 
     if (!id) {
         return res.status(400).json({ message: "Kitchen ID is required for updating." });
     }
 
-    if (!name && !phone && !email && !address && !latitude && !longitude && !password && !image) {
+    if (!name && !phone && !address && !latitude && !longitude && !password) {
         return res.status(400).json({ message: "Nothing to update." });
     }
 
@@ -115,19 +114,22 @@ export const updateKitchen = async (req, res) => {
             return res.status(404).json({ message: "Kitchen not found!" });
         }
 
-        if(image){
-            if(kitchen.recordset[0].profile_image_id){
-                await imageDelete(kitchen.recordset[0].profile_image_id);
-            }
-            uploadedImage = await imageUpload(image.path);
-            await fs.unlink(image.path);
-        }
-
         const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
-        await sql.query`UPDATE kitchens SET name=${name || kitchen.recordset[0].name}, phone=${phone || kitchen.recordset[0].phone}, email=${email || kitchen.recordset[0].email}, address=${address || kitchen.recordset[0].address}, latitude=${latitude || kitchen.recordset[0].latitude}, longitude=${longitude || kitchen.recordset[0].longitude}, profile_image_url=${uploadedImage?.secure_url || kitchen.recordset[0].profile_image_url}, profile_image_id=${uploadedImage?.public_id || kitchen.recordset[0].profile_image_id} WHERE id=${id}`;
+        let updates = [];
+        if(name) updates.push(`name='${name}'`);//here we are building the query mnually so have to write value of sting within single quotes because sql sriver will not do this automatically
+        if(phone) updates.push(`phone='${phone}'`);   
+        if(address) updates.push(`address='${address}'`);
+        if(latitude) updates.push(`latitude=${latitude}`);
+        if(longitude) updates.push(`longitude=${longitude}`);
+        if(hashedPassword) updates.push(`password='${hashedPassword}'`);
 
-        res.status(200).json({ message: "Kitchen updated successfully." });
+        
+        const query = `UPDATE kitchens SET ${updates.join(", ")} output inserted.* WHERE id = ${id};`;
+        console.log(query)
+        const updatedKitchen = await sql.query(query);
+
+        res.status(200).json(updatedKitchen.recordset[0]);
     }
     catch(err){
         res.status(500).json({ 
