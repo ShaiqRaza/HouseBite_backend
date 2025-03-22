@@ -11,9 +11,10 @@ app.use(express.urlencoded({ extended: true }));
 
 //routing imports
 import kitchensRoutes from './routes/kitchens.routes.js';
-
+import userRoutes from './routes/users.routes.js';
 
 app.use('/kitchens', kitchensRoutes);
+app.use('/users', userRoutes);
 
 app.get("/", (req, res) => {
     res.send("Hello World!");
