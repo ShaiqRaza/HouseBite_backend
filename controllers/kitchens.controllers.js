@@ -163,7 +163,7 @@ export const updateKitchenImage = async (req, res) => {
         uploadedImage = await imageUpload(image.path);
         await fs.unlink(image.path);
 
-        const updatedKitchen = await sql.query`UPDATE kitchens SET profile_image_url='${uploadedImage.secure_url}', profile_image_id='${uploadedImage.public_id}' output inserted.* WHERE id = ${id};`;
+        const updatedKitchen = await sql.query`UPDATE kitchens SET profile_image_url=${uploadedImage.secure_url}, profile_image_id=${uploadedImage.public_id} output inserted.* WHERE id = ${id};`;
         
        try{
         if(kitchen.recordset[0].profile_image_id)
