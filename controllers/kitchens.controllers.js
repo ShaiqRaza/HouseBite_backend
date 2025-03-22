@@ -138,3 +138,49 @@ export const updateKitchenDetails = async (req, res) => {
         });
     }
 };
+
+//will optimize this after learning transactions
+export const updateKitchenImage = async (req, res) => {
+    const id = req.params.id;
+    const image = req.file;
+    let uploadedImage = null;
+
+    if (!id) {
+        return res.status(400).json({ message: "Kitchen ID is required for updating." });
+    }
+
+    if (!image) {
+        return res.status(400).json({ message: "Image is required for updating." });
+    }
+
+    try{
+        const kitchen = await sql.query`SELECT * FROM kitchens WHERE id=${id}`;
+
+        if(kitchen.recordset.length == 0){
+            return res.status(404).json({ message: "ID is incorrect!" });
+        }
+
+        uploadedImage = await imageUpload(image.path);
+        await fs.unlink(image.path);
+
+        const updatedKitchen = await sql.query`UPDATE kitchens SET profile_image_url='${uploadedImage.secure_url}', profile_image_id='${uploadedImage.public_id}' output inserted.* WHERE id = ${id};`;
+        
+       try{
+        if(kitchen.recordset[0].profile_image_id)
+            await imageDelete(kitchen.recordset[0].profile_image_id);
+       }
+        catch(err){
+            console.warn("Error while deleting previous image", err.message);
+        }
+
+        res.status(200).json(updatedKitchen.recordset[0]);
+    }
+    catch(err){
+        if (uploadedImage) 
+            await imageDelete(uploadedImage.public_id);
+        res.status(500).json({ 
+            message: "An error occurred while updating the kitchen.",
+            error: err.message 
+        });
+    }
+};
