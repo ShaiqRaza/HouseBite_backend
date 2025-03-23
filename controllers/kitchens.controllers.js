@@ -232,4 +232,49 @@ export const getAllPlans = async (req, res) => {
             error: err.message 
         });
     }
+};
+
+export const createplan = async (req, res) => {
+    const id = req.params.id;
+    if (!id) 
+        return res.status(400).json({ message: "Kitchen ID is required." });
+    
+    const { plan_name, plan_description, meals } = req.body;
+
+    if(!plan_name || meals.length === 0)
+        return res.status(400).json({ message: "All fields are required." });
+
+    let newPlan = null;
+
+    //calculating the price of the plan
+    let plan_price = 0;
+    meals.forEach(meal => {
+        plan_price = plan_price + (meal.price * (meal.meal_days?.length || 1));
+    });
+
+    try{
+        newPlan = await sql.query`INSERT INTO plans (name, description, price, kitchen_id) output inserted.id VALUES (${plan_name}, ${plan_description || null}, ${plan_price}, ${id})`;
+        const plan_id = newPlan.recordset[0].id;
+        await Promise.all(
+            meals.map(async meal => {
+                const new_meal = await sql.query`INSERT INTO meals (plan_id, name, price) output inserted.id VALUES (${plan_id}, ${meal.name}, ${meal.price})`;
+                const meal_id = new_meal.recordset[0].id;
+
+                await Promise.all(
+                    meal.meal_days?.map(async meal_day => {
+                        await sql.query`INSERT INTO meal_days (meal_id, day, timing) VALUES (${meal_id}, ${meal_day.day}, ${meal_day.timing})`;
+                    })
+                );
+            })
+        );
+        res.status(201).json({ message: "Plan created successfully." });
+    }
+    catch(err){
+        if(newPlan) 
+            await sql.query`DELETE FROM plans WHERE id=${newPlan.recordset[0].id}`;
+        res.status(500).json({ 
+            message: "An error occurred while creating the plan.",
+            error: err.message 
+        });
+    }
 }

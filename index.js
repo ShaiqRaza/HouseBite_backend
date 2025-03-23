@@ -14,6 +14,7 @@ app.use(cookieParser());
 import kitchensRoutes from './routes/kitchens.routes.js';
 import userRoutes from './routes/users.routes.js';
 import subscriptionRoutes from './routes/subscriptions.routes.js';
+import planRoutes from './routes/plans.routes.js';
 
 app.use('/kitchens', kitchensRoutes);
 app.use('/users', userRoutes);
