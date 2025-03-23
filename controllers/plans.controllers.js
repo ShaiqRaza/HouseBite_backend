@@ -98,13 +98,14 @@ export const addMeal = async (req, res) => {
     let meal = null;
     
     try{
-        meal = await sql.query(`INSERT INTO meals (name, price, plan_id) output inserted.* VALUES (${name}, ${price}, ${id})`);
+        meal = await sql.query`INSERT INTO meals (name, price, plan_id) output inserted.* VALUES (${name}, ${price}, ${id})`;
         const meal_id = meal.recordset[0].id;
-        const meal_days_insert = await Promise.all(
+        const mel_uploaded = await Promise.all(
             meal_days.map(async (meal_day)=>{
-                return await sql.query(`INSERT INTO meal_days (meal_id, day, timing) VALUES (${meal_id}, ${meal_day.day}, ${meal_day.timing})`);
+                return await sql.query`INSERT INTO meal_days (meal_id, day, timing) VALUES (${meal_id}, ${meal_day.day}, ${meal_day.timing})`;
             })
         )
+        res.status(201).json({message: "Meal added successfully."});
     }
     catch(err){
         if(meal)
