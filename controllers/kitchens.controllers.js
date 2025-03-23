@@ -208,3 +208,28 @@ export const getRunningSubscriptions = async (req, res) => {
         });
     }
 };
+
+export const getAllPlans = async (req, res) => {
+    const id = req.params.id || null;
+    if (!id) {
+        return res.status(400).json({ message: "Kitchen ID is required." });
+    }
+    try{
+        const plans = await sql.query(`SELECT * FROM plans where kitchen_id=${id}`);
+        const DetailedPlans = await Promise.all 
+        (
+            plans.recordset.map(async (plan) => {
+            const schedule = await sql.query`exec getPlanSchedule ${plan.id}`;
+            plan.schedule = schedule.recordset;
+            return plan;
+            })
+        );
+        res.status(200).json(DetailedPlans);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while fetching plans.",
+            error: err.message 
+        });
+    }
+}
