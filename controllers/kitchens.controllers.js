@@ -52,7 +52,7 @@ export const createKitchen = async (req, res) => {
         const newKitchen = await sql.query`INSERT INTO kitchens (name, phone, email, password, address, latitude, longitude, profile_image_url, profile_image_id) OUTPUT INSERTED.* 
         VALUES (${name}, ${phone}, ${email}, ${hashedPassword}, ${address}, ${latitude}, ${longitude}, ${uploadedImage?.secure_url || null}, ${uploadedImage?.public_id || null})`;
 
-        const token = jwt.sign({ id: newKitchen.recordset[0].id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ email: newKitchen.recordset[0].email }, process.env.JWT_SECRET, { expiresIn: '1d' });
         res.cookie('token', token, { httpOnly: true });
         res.status(200).json(newKitchen.recordset[0]);
     }

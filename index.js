@@ -1,13 +1,14 @@
 import express from 'express';
 import dotenv from 'dotenv';
 dotenv.config();
-import sql from "./configurations/db.config.js";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
 //middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 //routing imports
 import kitchensRoutes from './routes/kitchens.routes.js';
