@@ -49,13 +49,15 @@ export const deleteMeal = async (req, res) => {
         return res.status(400).json({ message: "Meal ID is required." });
 
     try{
-        await sql.query`DELETE FROM meals WHERE id=${id}`;
+        const deletedMeal = await sql.query`DELETE FROM meals output deleted.* WHERE id=${id}`;
+        if(deletedMeal.recordset.length === 0)
+            return res.status(400).json({message: "Meal ID is incorrect."});
         res.status(200).json({ message: "Meal deleted successfully." });
     }
     catch(err){
         res.status(500).json({ 
             message: "An error occurred while deleting the meal.",
-            error: err.message 
+            error: err.message
         });
     }
 };
@@ -76,6 +78,8 @@ export const updateMeal = async (req, res) => {
 
     try{
         const meal = await sql.query(`UPDATE meals SET ${updates.join(", ")} output inserted.* WHERE id=${id}`);
+        if(!meal.recordset[0])
+            res.status(400).json({message: "Meal ID is incorrect."});
         res.status(200).json(meal.recordset[0]);
     }
     catch(err){
@@ -98,6 +102,10 @@ export const addMeal = async (req, res) => {
     let meal = null;
     
     try{
+        const plan = await sql.query`SELECT * FROM plans WHERE id=${id}`;
+        if(plan.recordset.length===0)
+            return res.status(404).json({ message: "Plan ID is incorrect." });
+
         meal = await sql.query`INSERT INTO meals (name, price, plan_id) output inserted.* VALUES (${name}, ${price}, ${id})`;
         const meal_id = meal.recordset[0].id;
         const mel_uploaded = await Promise.all(
