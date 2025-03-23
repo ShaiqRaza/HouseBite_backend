@@ -124,9 +124,7 @@ export const updateKitchenDetails = async (req, res) => {
         if(longitude) updates.push(`longitude=${longitude}`);
         if(hashedPassword) updates.push(`password='${hashedPassword}'`);
 
-        
         const query = `UPDATE kitchens SET ${updates.join(", ")} output inserted.* WHERE id = ${id};`;
-        console.log(query)
         const updatedKitchen = await sql.query(query);
 
         res.status(200).json(updatedKitchen.recordset[0]);
