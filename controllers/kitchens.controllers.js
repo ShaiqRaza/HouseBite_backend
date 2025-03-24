@@ -182,27 +182,3 @@ export const updateKitchenImage = async (req, res) => {
         });
     }
 };
-
-export const getRunningSubscriptions = async (req, res) => {
-    const id = req.params.id || null;
-    if (!id) {
-        return res.status(400).json({ message: "Kitchen ID is required for updating." });
-    }
-
-    try{
-        const kitchen = await sql.query`SELECT * FROM kitchens WHERE id=${id}`;
-
-        if(kitchen.recordset.length == 0){
-            return res.status(404).json({ message: "Kitchen not found!" });
-        }
-
-        const subscriptions = await sql.query`exec GetRunningSubscriptions ${id}`;
-        res.status(200).json(subscriptions.recordset);
-    }
-    catch(err){
-        res.status(500).json({ 
-            message: "An error occurred while fetching the subscriptions of your kitchen.",
-            error: err.message 
-        });
-    }
-};
