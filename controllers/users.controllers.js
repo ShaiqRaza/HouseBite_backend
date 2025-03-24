@@ -17,3 +17,33 @@ export const getAllUsers = async (req, res) =>{
         });
     }
 }
+
+export const createUser = async (req, res) => {
+    const {name, phone, email, address, latitude, longitude, password} = req.body || {};
+
+    //these are compulsory fields
+    if(!(name && phone && email && address && latitude && longitude && password)){
+        return res.status(400).json({ message: "All fields are required." });
+    }
+
+    try{
+
+        const response = await axios.get(`https://emailvalidation.abstractapi.com/v1/?api_key=${process.env.ABSTRACT_API_KEY}&email=${email}`)
+        if (response.data.deliverability === "UNDELIVERABLE" || !response.data.is_mx_found.value)
+            return res.status(400).json({ message: "Invalid email address." });
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await sql.query`INSERT INTO Users (name, phone, email, password, address, latitude, longitude) OUTPUT INSERTED.* 
+        VALUES (${name}, ${phone}, ${email}, ${hashedPassword}, ${address}, ${latitude}, ${longitude})`;
+
+        const token = jwt.sign({ email: newUser.recordset[0].email }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.cookie('token', token, { httpOnly: true });
+        res.status(200).json(newUser.recordset[0]);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while creating the User.",
+            error: err.message 
+        });
+    }
+}
