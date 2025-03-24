@@ -252,3 +252,22 @@ export const addMealDay = async (req, res) => {
         });
     }
 };
+
+export const deleteMealDay = async (req, res) => {
+    const id = req.params.id;
+    if(!id)
+        return res.status(400).json({ message: "Meal Day ID is required." });
+
+    try{
+        const deletedMealDay = await sql.query`DELETE FROM meal_days output deleted.* WHERE id=${id}`;
+        if(deletedMealDay.recordset.length === 0)
+            return res.status(400).json({message: "Meal Day ID is incorrect."});
+        res.status(200).json({ message: "Meal Day deleted successfully." });
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while deleting the meal day.",
+            error: err.message 
+        });
+    }
+};
