@@ -7,7 +7,9 @@ export const deletePlan = async (req, res) => {
         return res.status(400).json({ message: "Plan ID is required." });
 
     try{
-        await sql.query`DELETE FROM plans WHERE id=${id}`;//if I delete plans, respective meals and meal_days will be automatically deleted
+        const deletedPlan = await sql.query`DELETE FROM plans output deleted.* WHERE id=${id}`;//if I delete plans, respective meals and meal_days will be automatically deleted
+        if(deletedPlan.recordset.length === 0)
+            return res.status(400).json({message: "Plan ID is incorrect."});
         res.status(200).json({ message: "Plan deleted successfully." });
     }
     catch(err){
@@ -33,6 +35,8 @@ export const updatePlan = async (req, res) => {
 
     try{
         const plan = await sql.query(`UPDATE plans SET ${updates.join(", ")} output inserted.* WHERE id=${id}`);
+        if(plan.recordset.length === 0)
+            return res.status(400).json({message: "Plan ID is incorrect."});
         res.status(200).json(plan.recordset[0]);
     }
     catch(err){
