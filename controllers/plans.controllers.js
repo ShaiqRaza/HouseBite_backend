@@ -227,3 +227,28 @@ export const updateMealDay = async (req, res) => {
         });
     }
 };
+
+export const addMealDay = async (req, res) => {
+    const id = req.params.id;
+    if(!id)
+        return res.status(400).json({ message: "Meal ID is required." });
+
+    const {day, timing} = req.body || {};
+    if(!(day && timing))
+        return res.status(400).json({ message: "All fields are required." });
+
+    try{
+        const meal = await sql.query`SELECT * FROM meals WHERE id=${id}`;
+        if(meal.recordset.length===0)
+            return res.status(404).json({ message: "Meal ID is incorrect." });
+
+        const meal_day = await sql.query`INSERT INTO meal_days (meal_id, day, timing) output inserted.* VALUES (${id}, ${day}, ${timing})`;
+        res.status(201).json(meal_day.recordset[0]);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while adding the meal day.",
+            error: err.message 
+        });
+    }
+};
