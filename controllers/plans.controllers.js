@@ -200,3 +200,30 @@ export const addMeal = async (req, res) => {
         });
     }
 };
+
+export const updateMealDay = async (req, res) => {
+    const {day, timing} = req.body || {};
+    const id = req.params.id;
+    if(!id)
+        return res.status(400).json({ message: "Meal Day ID is required." });
+
+    if(!(day || timing))
+        return res.status(400).json({ message: "Nothing to update." });
+
+    let updates = [];
+    if(day) updates.push(`day = '${day}'`);
+    if(timing) updates.push(`timing = '${timing}'`);
+
+    try{
+        const meal_day = await sql.query(`UPDATE meal_days SET ${updates.join(", ")} output inserted.* WHERE id=${id}`);
+        if(!meal_day.recordset[0])
+            return res.status(400).json({message: "Meal Day ID is incorrect."});
+        res.status(200).json(meal_day.recordset[0]);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while updating the meal day.",
+            error: err.message 
+        });
+    }
+};
