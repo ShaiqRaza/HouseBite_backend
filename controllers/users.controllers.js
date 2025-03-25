@@ -47,3 +47,26 @@ export const createUser = async (req, res) => {
         });
     }
 }
+
+export const subscribePlan = async (req, res) => {
+    const {user_id, plan_id} = req.params || {};
+    if(!user_id)
+        return res.status(400).json({message: "User ID is not given."});
+    if(!plan_id)
+        return res.status(400).json({message: "Plan ID is not given."});
+
+    const {subscription_type, persons} = req.body;
+    if(!(subscription_type && persons))
+        return res.status(400).json({ message: "All fields are required." });
+
+    try{
+        const subscription = await sql.query`exec subscribePlan ${plan_id}, ${user_id}, ${persons}, ${subscription_type}`;
+        res.json(subscription.recordset[0]);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while subscribing the plan.",
+            error: err.message 
+        });
+    }
+}
