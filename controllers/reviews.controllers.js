@@ -67,8 +67,8 @@ export const replyToReview = async (req, res) => {
     const {comment} = req.body || {};
 
     try{
-        const reply = await sql.query`exec reply_to_review ${review_id} ${kitchen_id} ${comment}`;
-        res.json(reply);
+        const reply = await sql.query`exec reply_to_review ${review_id}, ${kitchen_id}, ${comment}`;
+        res.json(reply.recordset[0]);
     }
     catch(err){
         res.status(500).json({ 
