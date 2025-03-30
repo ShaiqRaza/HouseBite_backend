@@ -108,7 +108,7 @@ export const getReviewsOfKitchen = async (req, res) => {
 
         reviews = await Promise.all (
             reviews.recordset.map(async review => {
-                const replies = await sql.query`select comment from review_replies where review_id=${review.id}`;
+                const replies = await sql.query`select comment from review_replies where review_id=${review.review_id}`;
                 review.replies = replies.recordset;
                 return review;
             })
