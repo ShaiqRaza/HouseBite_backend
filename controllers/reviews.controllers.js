@@ -96,3 +96,29 @@ export const editReply = async (req, res) => {
         });
     }
 }
+
+export const getReviewsOfKitchen = async (req, res) => {
+    const {kitchen_id} = req.params;
+    console.log(req.params);
+    try{
+        let reviews = await sql.query`exec getReviewsOfKitchen ${kitchen_id}`;
+        if(reviews.recordset.length == 0)
+            return res.status(404).json({message: 'No reviews found for this kitchen.'});
+
+        reviews = await Promise.all (
+            reviews.recordset.map(async review => {
+                const replies = await sql.query`select comment from review_replies where review_id=${review.id}`;
+                review.replies = replies.recordset;
+                return review;
+            })
+        );
+
+        res.status(200).json(reviews);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while fetching the reviews.",
+            error: err.message 
+        });
+    }
+}
