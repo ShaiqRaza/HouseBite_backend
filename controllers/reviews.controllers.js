@@ -60,3 +60,19 @@ export const deleteReview = async (req, res) => {
         });
     }
 }
+
+export const replyToReview = async (req, res) => {
+    const {review_id, kitchen_id} = req.params;
+    const {comment} = req.body || {};
+
+    try{
+        const reply = await sql.query`exec reply_to_review ${review_id} ${kitchen_id} ${comment}`;
+        res.json(reply);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while replying the review.",
+            error: err.message 
+        });
+    }
+}
