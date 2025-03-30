@@ -1,5 +1,5 @@
 import sql from '../configurations/db.config.js';
-import { imageUpload, imageDelete } from '../../PortfolioWebsiteBackend/utils/uploadHandlers.js';
+import { imageUpload, imageDelete } from '../utils/media.utils.js';
 import fs from 'fs/promises';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
@@ -19,7 +19,7 @@ export const getAllkitchens = async (req, res) => {
 }
 
 //will create kitchen along with autheticating it by sending cookie
-//will add emeail verification later
+//will add email verification later
 export const createKitchen = async (req, res) => {
     const image = req.file || null;//image is optional
 
