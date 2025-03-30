@@ -76,3 +76,23 @@ export const replyToReview = async (req, res) => {
         });
     }
 }
+
+export const editReply = async (req, res) => {
+    const {id} = req.params;
+    const {comment} = req.body || {};
+    if(!comment)
+        return res.status(400).json({message: 'All fields are required.'});
+
+    try{
+        const editedReply = await sql.query`update review_replies set comment=${comment} output inserted.* where id=${id}`
+        if(!editReply)
+            return res.status(400).json({message: 'Review ID is incorrect!'})
+        res.status(200).json(editedReply);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while editing the reply.",
+            error: err.message 
+        });
+    }
+}
