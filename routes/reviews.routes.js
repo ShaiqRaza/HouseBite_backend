@@ -7,7 +7,7 @@ router.post('/add/:user_id/:kitchen_id', addReview);
 router.post('/edit/:user_id/:review_id', editReview);
 router.delete('/delete/:id', deleteReview);
 router.post('/reply/:kitchen_id/:review_id', replyToReview);
-router.post('/reply/edit/:id', editReply);
+router.post('/edit-reply/:id', editReply);//review_id as id
 router.get('/kitchen/:kitchen_id', getReviewsOfKitchen); //kitchen id as id
 
 export default router;
