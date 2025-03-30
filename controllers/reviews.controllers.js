@@ -13,6 +13,7 @@ export const addReview = async (req, res) => {
 
     try{
         const reviewData = await sql.query`exec addReview ${user_id}, ${kitchen_id}, ${rating}, ${comment}`;
+        await sql.query`exec updateRatingOfKitchen ${kitchen_id}`;
         res.status(200).json(reviewData.recordset[0]);
     }
     catch(err){
