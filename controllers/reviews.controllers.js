@@ -42,3 +42,21 @@ export const editReview = async (req, res) => {
         });
     }
 }
+
+export const deleteReview = async (req, res) => {
+    const id = req.params;
+    if(!id)
+        return res.status(400).json({message: 'Review ID is not given.'});
+    try{
+        const deletedReview = sql.query`delete from reviews output deleted.* where id=${id}`
+        if(deletedReview.recordset[0].length == 0)
+            return res.status(400).json({message: 'Review ID is incorrect.'})
+        res.status(200).json({message: 'Review Deleted successfully'});
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while deleting the review.",
+            error: err.message 
+        });
+    }
+}
