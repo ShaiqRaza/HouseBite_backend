@@ -44,12 +44,13 @@ export const editReview = async (req, res) => {
 }
 
 export const deleteReview = async (req, res) => {
-    const id = req.params;
+    const id = req.params.id;
     if(!id)
         return res.status(400).json({message: 'Review ID is not given.'});
     try{
-        const deletedReview = sql.query`delete from reviews output deleted.* where id=${id}`
-        if(deletedReview.recordset[0].length == 0)
+        const deletedReview = await sql.query`delete from reviews output deleted.* where id=${id}`
+
+        if(deletedReview.recordset.length == 0)
             return res.status(400).json({message: 'Review ID is incorrect.'})
         res.status(200).json({message: 'Review Deleted successfully'});
     }
@@ -99,7 +100,7 @@ export const editReply = async (req, res) => {
 
 export const getReviewsOfKitchen = async (req, res) => {
     const {kitchen_id} = req.params;
-    console.log(req.params);
+    
     try{
         let reviews = await sql.query`exec getReviewsOfKitchen ${kitchen_id}`;
         if(reviews.recordset.length == 0)
