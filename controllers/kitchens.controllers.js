@@ -79,6 +79,11 @@ export const deleteKitchen = async (req, res) => {
             return res.status(404).json({ message: "Kitchen not found!" });
         }
 
+        const runningSubscriptions = await sql.query`exec GetRunningSubscriptions ${id}`;
+        if(runningSubscriptions.recordset.length > 0){
+            return res.status(400).json({ message: "Cannot delete kitchen with active subscriptions." });
+        }
+
         if(kitchen.recordset[0].profile_image_id){
             await imageDelete(kitchen.recordset[0].profile_image_id);
         }
