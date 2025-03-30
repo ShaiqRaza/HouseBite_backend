@@ -182,3 +182,27 @@ export const updateKitchenImage = async (req, res) => {
         });
     }
 };
+
+export const changeStatus = async (req, res) => {
+    const id = req.params.id;
+    const {status} = req.body || {};
+
+    if (!id) {
+        return res.status(400).json({ message: "Kitchen ID is required for updating." });
+    }
+
+    if (status == null) {
+        return res.status(400).json({ message: "Status is required for updating." });
+    }
+
+    try{
+        const updatedKitchen = await sql.query`exec changeStatus ${status}, ${id}`;
+        res.status(200).json(updatedKitchen.recordset[0]);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while updating the kitchen.",
+            error: err.message 
+        });
+    }
+}
