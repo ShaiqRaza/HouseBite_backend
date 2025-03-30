@@ -246,7 +246,7 @@ begin
 		throw 50001, 'This user is not allowed to add review to this kitchen', 1;
 	if @rating>=0 and @rating<=5
 	begin
-		insert into reviews (user_id, kitchen_id, rating, comment) output inserted.*
+		insert into reviews (user_id, kitchen_id, rating, comment) output inserted.* 
 		values
 		(@user_id, @kitchen_id, @rating, @comment);
 	end;
@@ -336,4 +336,27 @@ begin
 	inner join 
 	(select user_id, comment, rating, id from Reviews where kitchen_id=@kitchen_id) r
 	on r.user_id=u.id;
+end;
+
+alter procedure updateRatingOfKitchen
+@kitchen_id int
+as
+begin
+	Declare @ratingAns decimal(3, 2)
+	set  @ratingAns=0
+	Declare @sum decimal(6,2)
+	Declare @reviewCount int
+
+	set @reviewCount = (select count(*) from reviews where kitchen_id=@kitchen_id);
+
+	if @reviewCount>0
+		begin
+			set @sum = (select cast(Sum(rating) as decimal(6, 2)) from reviews where kitchen_id=@kitchen_id);
+			set @ratingAns = cast( @sum/@reviewCount as decimal(3,2) );
+			update kitchens
+			set rating=@ratingAns
+			where id=@kitchen_id
+		end;
+	else
+		throw 50001, 'No Reviews yet', 1;
 end;
