@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllkitchens, createKitchen, deleteKitchen, updateKitchenDetails, updateKitchenImage, changeStatus, getTodaysSchedule} from '../controllers/kitchens.controllers.js';
+import { getAllkitchens, createKitchen, deleteKitchen, updateKitchenDetails, updateKitchenImage, changeStatus, getTodaysSchedule, loginKitchen} from '../controllers/kitchens.controllers.js';
 import upload from '../configurations/multer.config.js';
 import {requireKitchenLogin} from '../middlewares/requireKitchenLogin.js';
 
@@ -12,5 +12,6 @@ router.post('/update/details/:id', updateKitchenDetails);
 router.post('/update/image/:id', upload.single('image'), updateKitchenImage);
 router.post('/change-status/:id', changeStatus) //available or not available
 router.get('/schedule/:id', getTodaysSchedule); //kitchen id as id
+router.post('/login', loginKitchen); //kitchen id as id
 
 export default router;

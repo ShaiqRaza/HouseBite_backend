@@ -236,3 +236,33 @@ export const getTodaysSchedule = async (req, res) => {
         });
     }
 };
+
+export const loginKitchen = async (req, res) => {
+    const {email, password} = req.body || {};
+
+    if(!(email && password)){
+        return res.status(400).json({ message: "All fields are required." });
+    }
+
+    try{
+        const kitchen = await sql.query`SELECT * FROM kitchens WHERE email=${email}`;
+        if(kitchen.recordset.length == 0){
+            return res.status(404).json({ message: "Email or password is incorrect!" });
+        }
+
+        const isMatch = await bcrypt.compare(password, kitchen.recordset[0].password);
+        if(!isMatch){
+            return res.status(401).json({ message: "Email or password is incorrect!" });
+        }
+
+        const token = jwt.sign({ email: kitchen.recordset[0].email }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.cookie('token', token, { httpOnly: true });
+        res.status(200).json(kitchen.recordset[0]);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while logging in the kitchen.",
+            error: err.message 
+        });
+    }
+};
