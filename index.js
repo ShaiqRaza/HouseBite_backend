@@ -2,8 +2,8 @@ import express from 'express';
 import dotenv from 'dotenv';
 dotenv.config();
 import cookieParser from "cookie-parser";
-
 const app = express();
+import sql from './configurations/db.config.js'
 
 //middlewares
 app.use(express.json());
@@ -22,6 +22,15 @@ app.use('/users', userRoutes);
 app.use('/subscriptions', subscriptionRoutes);
 app.use('/plans', planRoutes);
 app.use('/reviews', reviewRoutes);
+
+//updating subscriptions statuses
+setInterval(async () => {
+    try {
+        await sql.query`exec updateSubscriptionStatus`;
+    } catch (err) {
+        console.error('Error executing the query:', err);
+    }
+}, 86400000); // Every 24 hours
 
 app.get("/", (req, res) => {
     res.send("Hello World!");

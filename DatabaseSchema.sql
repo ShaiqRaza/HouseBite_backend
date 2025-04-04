@@ -231,6 +231,18 @@ BEGIN
 		throw 50002, 'Plan ID is incorrect.', 1
 END;
 
+Create PROCEDURE UpdateSubscriptionStatus
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE Subscriptions
+    SET status = 'completed'
+    WHERE 
+        status = 'running'
+        AND end_date <= CAST(GETDATE() + 1 AS DATE);
+END
+
 alter procedure addReview
 @user_id int,
 @kitchen_id int,
