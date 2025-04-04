@@ -218,7 +218,16 @@ export const getTodaysSchedule = async (req, res) => {
     try{
         //this procedure will return json data
         const schedule = await sql.query`exec get_kitchen_schedule_today ${id}`;
-        res.status(200).json(schedule);
+
+        schedule.recordset.forEach(row => {
+            try {
+                row.time_schedule = JSON.parse(row.time_schedule);
+            } catch (e) {
+                row.time_schedule = [];
+            }
+        });
+
+        res.status(200).json(schedule.recordset);
     }
     catch(err){
         res.status(500).json({ 

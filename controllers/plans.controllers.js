@@ -61,7 +61,7 @@ export const createplan = async (req, res) => {
                 );
             })
         );
-        res.status(201).json({ message: "Plan created successfully." });
+        res.status(201).json( newPlan.recordset[0]);
     }
     catch(err){
         if(newPlan) 
