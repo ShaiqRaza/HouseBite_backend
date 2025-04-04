@@ -144,6 +144,16 @@ create table review_replies (
 	constraint rid_fk_rr foreign key (review_id) references reviews(id),
 );
 
+create table kitchen_reports(
+	id int primary key identity(1,1),
+	user_id int not null,
+	kitchen_id int not null,
+	reason varchar(max),
+	reported_at DATETIME DEFAULT GETDATE(),
+	constraint kid_fk_reports foreign key (kitchen_id) references kitchens(id),
+	constraint uid_fk_reports foreign key (user_id) references users(id),
+);
+
 --stored Procedures
 
 --all running subscription of a kitchen
@@ -158,7 +168,7 @@ in (select id from plans where kitchen_id=@kitchen_id) and status='running') all
 on allsubscriptions.user_id = users.id;
 END;
 
-alter procedure getplanfromsubscription
+create procedure getplanfromsubscription
 @subscription_id int
 AS
 Begin
@@ -195,7 +205,7 @@ from Meal_Days md
 where md.meal_id=@meal_id;
 END;
 
-alter procedure SubscribePlan 
+create procedure SubscribePlan 
 @plan_id int,
 @user_id int,
 @persons int,
@@ -231,19 +241,7 @@ BEGIN
 		throw 50002, 'Plan ID is incorrect.', 1
 END;
 
-Create PROCEDURE UpdateSubscriptionStatus
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    UPDATE Subscriptions
-    SET status = 'completed'
-    WHERE 
-        status = 'running'
-        AND end_date <= CAST(GETDATE() + 1 AS DATE);
-END
-
-alter procedure addReview
+create procedure addReview
 @user_id int,
 @kitchen_id int,
 @rating int,
@@ -266,7 +264,7 @@ begin
 		throw 50001, 'Rating must be from 0 to 5', 1;
 end;
 
-alter procedure editReview
+create procedure editReview
 @user_id int,
 @review_id int,
 @comment nvarchar(max)
@@ -317,7 +315,7 @@ begin
 		throw 50001, 'Given status is incorrect.', 1;
 end;
 
-alter procedure reply_to_review
+create procedure reply_to_review
 @review_id int,
 @kitchen_id int,
 @comment nvarchar(max)
@@ -338,7 +336,7 @@ begin
 		end;
 end;
 
-alter procedure getReviewsOfKitchen
+create procedure getReviewsOfKitchen
 @kitchen_id int
 as
 begin
@@ -350,7 +348,7 @@ begin
 	on r.user_id=u.id;
 end;
 
-alter procedure updateRatingOfKitchen
+create procedure updateRatingOfKitchen
 @kitchen_id int
 as
 begin
@@ -371,4 +369,33 @@ begin
 		end;
 	else
 		throw 50001, 'No Reviews yet', 1;
+end;
+
+Create PROCEDURE UpdateSubscriptionStatus
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE Subscriptions
+    SET status = 'completed'
+    WHERE 
+        status = 'running'
+        AND end_date <= CAST(GETDATE() + 1 AS DATE);
+END
+
+create procedure report_kitchen
+@user_id int,
+@kitchen_id int,
+@reason varchar(max)
+AS
+begin
+	if not exists (select 1 from users where id=@user_id)
+		throw 50001, 'User ID is incorrect', 1;
+	if not exists (select 1 from kitchens where id=@kitchen_id)
+		throw 50001, 'Kitchen ID is incorrect', 1;
+	if not exists (select 1 from user_kitchen_relation where user_id=@user_id and kitchen_id=@kitchen_id)
+		throw 50001, 'This user is not allowed to add review to this kitchen', 1;
+	INSERT INTO kitchen_reports (user_id, kitchen_id, reason, reported_at)
+	output inserted.*
+    VALUES (@user_id, @kitchen_id, @reason, GETDATE());
 end;
