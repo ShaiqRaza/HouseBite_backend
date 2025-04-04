@@ -390,11 +390,14 @@ begin
 end;
 
 --getting todays schedule of kitchen
-alter PROCEDURE get_kitchen_schedule_today
+create PROCEDURE get_kitchen_schedule_today
     @kitchen_id INT
 AS
 BEGIN
     SET NOCOUNT ON;
+
+	if not exists (select 1 from kitchens where id=@kitchen_id)
+		throw 50001, 'Kitchen ID is incorrect', 1;
 
     DECLARE @today_day VARCHAR(10);
     SET @today_day = DATENAME(WEEKDAY, GETDATE());
