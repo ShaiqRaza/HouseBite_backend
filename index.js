@@ -16,12 +16,14 @@ import userRoutes from './routes/users.routes.js';
 import subscriptionRoutes from './routes/subscriptions.routes.js';
 import planRoutes from './routes/plans.routes.js';
 import reviewRoutes from './routes/reviews.routes.js';
+import reportRoutes from './routes/reports.routes.js';
 
 app.use('/kitchens', kitchensRoutes);
 app.use('/users', userRoutes);
 app.use('/subscriptions', subscriptionRoutes);
 app.use('/plans', planRoutes);
 app.use('/reviews', reviewRoutes);
+app.use('/reports', reportRoutes);
 
 //updating subscriptions statuses
 setInterval(async () => {
