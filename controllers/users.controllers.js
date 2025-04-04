@@ -112,3 +112,33 @@ export const subscribePlan = async (req, res) => {
         });
     }
 }
+
+export const loginUser = async (req, res) => {
+    const {email, password} = req.body || {};
+
+    if(!(email && password)){
+        return res.status(400).json({ message: "All fields are required." });
+    }
+
+    try{
+        const user = await sql.query`SELECT * FROM Users WHERE email=${email}`;
+        if(user.recordset.length == 0){
+            return res.status(404).json({ message: "Email or password is incorrect!" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.recordset[0].password);
+        if(!isMatch){
+            return res.status(401).json({ message: "Email or password is incorrect!" });
+        }
+
+        const token = jwt.sign({ email: user.recordset[0].email }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.cookie('token', token, { httpOnly: true });
+        res.status(200).json(user.recordset[0]);
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while logging in the user.",
+            error: err.message 
+        });
+    }
+};
