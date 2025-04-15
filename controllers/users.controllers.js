@@ -123,12 +123,12 @@ export const loginUser = async (req, res) => {
     try{
         const user = await sql.query`SELECT * FROM Users WHERE email=${email}`;
         if(user.recordset.length == 0){
-            return res.status(404).json({ message: "Email or password is incorrect!" });
+            return res.status(400).json({ message: "Email or password is incorrect!" });
         }
 
         const isMatch = await bcrypt.compare(password, user.recordset[0].password);
         if(!isMatch){
-            return res.status(401).json({ message: "Email or password is incorrect!" });
+            return res.status(400).json({ message: "Email or password is incorrect!" });
         }
 
         const token = jwt.sign({ email: user.recordset[0].email }, process.env.JWT_SECRET, { expiresIn: '1d' });
@@ -138,6 +138,28 @@ export const loginUser = async (req, res) => {
     catch(err){
         res.status(500).json({ 
             message: "An error occurred while logging in the user.",
+            error: err.message 
+        });
+    }
+};
+
+export const isLoggedIn = async (req, res) => {
+    try{
+        const authCookie = req.cookies.token;
+        if(!authCookie)
+            return res.status(400).json({success: false, message: "There is no cookie!"});
+        
+        const decoded = jwt.verify(authCookie, process.env.JWT_SECRET);
+        const user = await sql.query`SELECT * FROM Users WHERE email=${decoded.email}`;
+
+        if(user.recordset.length > 0){
+            return res.status(200).json({success: true, user: user.recordset[0]});
+        }
+        return res.status(500).json({success: false, message: "User not found!"});
+    }
+    catch(err){
+        res.status(500).json({ 
+            message: "An error occurred while checking login status.",
             error: err.message 
         });
     }

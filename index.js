@@ -4,8 +4,10 @@ dotenv.config();
 import cookieParser from "cookie-parser";
 const app = express();
 import sql from './configurations/db.config.js'
+import cors from 'cors';
 
 //middlewares
+app.use(cors({credentials: true, origin: process.env.CLIENT_URL}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
