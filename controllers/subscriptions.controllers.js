@@ -1,5 +1,6 @@
 import sql from '../configurations/db.config.js';
 
+//no need for this route n controller
 export const getAllSubscriptions = async (req, res) => {
     try {
         const subscriptions = await sql.query('SELECT * FROM subscriptions');

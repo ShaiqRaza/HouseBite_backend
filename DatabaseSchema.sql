@@ -63,22 +63,6 @@ CREATE TABLE Meal_Days (
 	constraint pk_mealDays primary key (meal_id, day, timing)
 );
 
-CREATE TABLE Subscriptions (
-    id INT PRIMARY KEY IDENTITY(1,1),
-    user_id INT NOT NULL,
-    plan_id INT NOT NULL,
-    persons INT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    start_date DATE DEFAULT CAST(GETDATE() AS DATE),
-    type VARCHAR(10) NOT NULL,
-    CONSTRAINT CK_Subscriptions_Type CHECK (type IN ('weekly', 'monthly')),
-    end_date DATE NOT NULL,
-    status VARCHAR(10) NOT NULL DEFAULT 'running',
-    CONSTRAINT CK_Subscriptions_Status CHECK (status IN ('running', 'stopped', 'completed')),
-    CONSTRAINT FK_Subscriptions_Users FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
-    CONSTRAINT FK_Subscriptions_Plans FOREIGN KEY (plan_id) REFERENCES Plans(id) ON DELETE CASCADE
-);
-
 CREATE TABLE Payments (
     id INT IDENTITY(1,1) PRIMARY KEY,
     user_id INT NOT NULL,
@@ -110,6 +94,34 @@ CREATE TABLE Reviews (
     date DATETIME DEFAULT GETDATE() NOT NULL,
     CONSTRAINT FK_Reviews_Users FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
     CONSTRAINT FK_Reviews_Kitchens FOREIGN KEY (kitchen_id) REFERENCES Kitchens(id) ON DELETE CASCADE
+);
+
+CREATE TABLE Subscriptions (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    user_id INT NOT NULL,
+    plan_id INT NOT NULL,
+    persons INT NOT NULL,
+    start_date DATE DEFAULT CAST(GETDATE() AS DATE),
+    type VARCHAR(10) NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(10) NOT NULL DEFAULT 'running',
+    CONSTRAINT CK_Subscriptions_Type CHECK (type IN ('weekly', 'monthly')),
+    CONSTRAINT CK_Subscriptions_Status CHECK (status IN ('running', 'stopped', 'completed')),
+    CONSTRAINT FK_Subscriptions_Users FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    CONSTRAINT FK_Subscriptions_Plans FOREIGN KEY (plan_id) REFERENCES Plans(id) ON DELETE CASCADE
+);
+
+CREATE TABLE Subscription_Pricing (
+    plan_id INT NOT NULL,
+    persons INT NOT NULL,
+    type VARCHAR(10) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    
+    CONSTRAINT PK_SubscriptionPricing PRIMARY KEY (plan_id, persons, type),
+    CONSTRAINT CK_SubscriptionPricing_Type CHECK (type IN ('weekly', 'monthly')),
+    CONSTRAINT CK_SubscriptionPricing_Price CHECK (price >= 0),
+    CONSTRAINT CK_SubscriptionPricing_Persons CHECK (persons > 0),
+    CONSTRAINT FK_SubscriptionPricing_Plans FOREIGN KEY (plan_id) REFERENCES Plans(id) ON DELETE CASCADE
 );
 
 CREATE TABLE Refunds (
@@ -150,6 +162,7 @@ create table kitchen_reports(
 	kitchen_id int not null,
 	reason varchar(max),
 	reported_at DATETIME DEFAULT GETDATE(),
+	CONSTRAINT ukr_unique_report UNIQUE (user_id, kitchen_id),
 	constraint kid_fk_reports foreign key (kitchen_id) references kitchens(id),
 	constraint uid_fk_reports foreign key (user_id) references users(id),
 );
@@ -157,14 +170,20 @@ create table kitchen_reports(
 --stored Procedures
 
 --all running subscription of a kitchen
-create procedure GetRunningSubscriptions
+alter procedure GetRunningSubscriptions
 @kitchen_id int
 AS
 BEGIN
 select allsubscriptions.*, name user_name, email user_email, phone user_phone, address user_address from users
 inner join 
-(select * from subscriptions where plan_id 
-in (select id from plans where kitchen_id=@kitchen_id) and status='running') allsubscriptions
+(
+select s.*, sp.price 
+from subscriptions s 
+inner join Subscription_Pricing sp 
+ON sp.plan_id = s.plan_id AND s.persons = sp.persons AND s.type = sp.type
+where s.plan_id in (select id from plans where kitchen_id=@kitchen_id) 
+and status='running'
+)allsubscriptions
 on allsubscriptions.user_id = users.id;
 END;
 
@@ -174,6 +193,46 @@ AS
 Begin
 select p.id, p.name, p.price
 from (select * from plans where id=(select plan_id from subscriptions where id=@subscription_id)) p
+END;
+
+alter PROCEDURE get_kitchen_schedule_today
+    @kitchen_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+	if not exists (select 1 from kitchens where id=@kitchen_id)
+		throw 50001, 'Kitchen ID is incorrect', 1;
+
+    DECLARE @today_day VARCHAR(10);
+    SET @today_day = DATENAME(WEEKDAY, GETDATE());
+
+    SELECT
+        md.timing,
+        (
+            SELECT
+                m.name AS meal,
+                u.name AS user_name,
+                u.address AS user_address,
+				s.persons
+            FROM Subscriptions s
+            INNER JOIN Users u ON u.id = s.user_id
+            INNER JOIN Plans p ON p.id = s.plan_id
+            INNER JOIN Meals m ON m.plan_id = p.id
+            INNER JOIN Meal_Days md2 ON md2.meal_id = m.id
+            WHERE 
+                p.kitchen_id = @kitchen_id
+                AND md2.timing = md.timing
+                AND md2.day = @today_day
+                AND s.status = 'running'
+            FOR JSON PATH
+        ) AS time_schedule
+    FROM Meals m
+    INNER JOIN Plans p ON p.id = m.plan_id
+    INNER JOIN Meal_Days md ON md.meal_id = m.id AND md.day = @today_day
+    WHERE p.kitchen_id = @kitchen_id
+    GROUP BY md.timing
+    ORDER BY md.timing;
 END;
 
 create procedure getPlanMeals
@@ -194,13 +253,14 @@ from Meal_Days md
 where md.meal_id=@meal_id;
 END;
 
-create procedure SubscribePlan 
+alter procedure SubscribePlan 
 @plan_id int,
 @user_id int,
 @persons int,
 @type varchar(10)
 AS
 BEGIN 
+	Declare @sub_id int
 	Declare @end_date date
 	Declare @price Decimal(10, 2)
 	set @price = (select price from plans where id=@plan_id)
@@ -220,8 +280,32 @@ BEGIN
 					set @price = (@price * 4) + (@price * 0.285714);
 					SET @price = @price * @persons;
 				END
-			insert into subscriptions (user_id, plan_id, persons, price, type, start_date, end_date) OUTPUT INSERTED.*
-			values (@user_id, @plan_id, @persons, @price, @type, DATEADD(DAY, 1, GETDATE()), @end_date);
+			insert into subscriptions (user_id, plan_id, persons, type, start_date, end_date)
+			values (@user_id, @plan_id, @persons, @type, DATEADD(DAY, 1, GETDATE()), @end_date);
+			SET @sub_id = SCOPE_IDENTITY();
+			 IF NOT EXISTS (
+                SELECT 1 FROM Subscription_Pricing 
+                WHERE plan_id = @plan_id AND persons = @persons AND type = @type
+            )
+			begin
+				insert into Subscription_Pricing (plan_id, persons, price, type)
+				values (@plan_id, @persons, @price, @type);
+			end;
+
+			SELECT 
+                s.id,
+                s.user_id,
+                s.plan_id,
+                s.persons,
+                s.type,
+                sp.price,
+                s.start_date,
+                s.end_date
+            FROM Subscriptions s
+            JOIN Subscription_Pricing sp
+                ON s.plan_id = sp.plan_id AND s.persons = sp.persons AND s.type = sp.type
+            WHERE s.id = @sub_id;
+
 		END;
 		else
 			throw 50001, 'User ID is incorrect.', 1
@@ -276,12 +360,22 @@ begin
 		end;
 end;
 
-create procedure GetRunningSubscriptionsOfUser
+alter procedure GetRunningSubscriptionsOfUser
 @user_id int
 AS
 BEGIN
 	if exists (select 1 from users where id = @user_id)
-		select * from subscriptions where user_id=@user_id and status='running';
+		select 
+         s.id,
+         s.user_id,
+         s.plan_id,
+         s.persons,
+         s.type,
+         sp.price,
+         s.start_date,
+         s.end_date
+		from subscriptions s join Subscription_Pricing sp on s.plan_id = sp.plan_id AND s.persons = sp.persons AND s.type = sp.type
+		where user_id=@user_id and status='running';
 	else
 		throw 50001, 'User ID is incorrect', 1;
 END;
@@ -388,44 +482,3 @@ begin
 	output inserted.*
     VALUES (@user_id, @kitchen_id, @reason, GETDATE());
 end;
-
---getting todays schedule of kitchen
-create PROCEDURE get_kitchen_schedule_today
-    @kitchen_id INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-	if not exists (select 1 from kitchens where id=@kitchen_id)
-		throw 50001, 'Kitchen ID is incorrect', 1;
-
-    DECLARE @today_day VARCHAR(10);
-    SET @today_day = DATENAME(WEEKDAY, GETDATE());
-
-    SELECT
-        md.timing,
-        (
-            SELECT
-                m.name AS meal,
-                u.name AS user_name,
-                u.address AS user_address,
-				s.persons
-            FROM Subscriptions s
-            INNER JOIN Users u ON u.id = s.user_id
-            INNER JOIN Plans p ON p.id = s.plan_id
-            INNER JOIN Meals m ON m.plan_id = p.id
-            INNER JOIN Meal_Days md2 ON md2.meal_id = m.id
-            WHERE 
-                p.kitchen_id = @kitchen_id
-                AND md2.timing = md.timing
-                AND md2.day = @today_day
-                AND s.status = 'running'
-            FOR JSON PATH
-        ) AS time_schedule
-    FROM Meals m
-    INNER JOIN Plans p ON p.id = m.plan_id
-    INNER JOIN Meal_Days md ON md.meal_id = m.id AND md.day = @today_day
-    WHERE p.kitchen_id = @kitchen_id
-    GROUP BY md.timing
-    ORDER BY md.timing;
-END;

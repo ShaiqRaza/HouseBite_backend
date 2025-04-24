@@ -164,3 +164,17 @@ export const isLoggedIn = async (req, res) => {
         });
     }
 };
+
+export const logoutUser = (req, res) =>{
+    try{
+        res.clearCookie('token', {httpOnly: true, path: "/" });
+        return res.status(200).json({success: true, message: "Logged out successfully!"})
+    }
+    catch(err){
+        res.status(500).json({
+            success: false,
+            message: "error occured at user logging out",
+            error: err.message
+        })
+    }
+}
